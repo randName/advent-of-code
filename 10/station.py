@@ -32,12 +32,13 @@ def get_angle(station, target):
     return x, y
 
 
-def sweep(angles):
+def sweep(station, angles):
     def a(x, y):
         return (atan2(y, x) - pi / 2 - pi) % (2 * pi)
 
+    sx, sy = station
     for vs in angles.values():
-        vs.sort(key=lambda x: hypot(*x), reverse=True)
+        vs.sort(key=lambda p: hypot(sx - p[0], sy - p[1]), reverse=True)
 
     rotation = sorted(angles.items(), key=lambda k: a(*k[0]))
 
@@ -56,11 +57,13 @@ if __name__ == "__main__":
         angles = defaultdict(list)
         for j in asteroids:
             if j != i:
-                angles[get_angle(i, j)].append(b)
-        candidates[a] = angles
+                angles[get_angle(i, j)].append(j)
+        candidates[i] = angles
 
+    # part 1
     best = max(candidates.items(), key=lambda x: len(x[1]))
     print(len(best[1]), best[0])
 
-    vapour = tuple(sweep(candidates[best[0]]))
+    # part 2
+    vapour = tuple(sweep(best[0], candidates[best[0]]))
     print(vapour[199])

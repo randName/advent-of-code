@@ -49,7 +49,7 @@ def sweep(station, angles):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/10.txt') as f:
         asteroids = tuple(get_space(f))
 
     candidates = {}

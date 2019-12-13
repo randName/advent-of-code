@@ -57,7 +57,7 @@ def run(inst):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/05.txt') as f:
         instructions = [int(i) for i in f.readline().strip().split(',')]
 
     run(instructions)

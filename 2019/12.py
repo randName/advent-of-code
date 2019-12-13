@@ -97,7 +97,7 @@ class Sim:
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/12.txt') as f:
         moons = Sim(Body(line.strip()) for line in f)
 
     for i in range(1000):

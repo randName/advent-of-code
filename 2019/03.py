@@ -32,7 +32,7 @@ def min_step(a, b):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/03.txt') as f:
         wires = tuple(line.strip() for line in f)
 
     # part 1

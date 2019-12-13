@@ -14,7 +14,7 @@ def compute_fuel_2(mass):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/01.txt') as f:
         modules = tuple(int(line.strip()) for line in f)
 
     # part 1

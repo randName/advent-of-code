@@ -101,7 +101,7 @@ def paint(robot, hull=None):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/11.txt') as f:
         instructions = tuple(int(i) for i in f.readline().strip().split(','))
 
     # part 1

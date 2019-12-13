@@ -90,7 +90,7 @@ def amp2(phases, instructions):
 if __name__ == "__main__":
     from itertools import permutations
 
-    with open('input.txt') as f:
+    with open('input/07.txt') as f:
         instructions = tuple(int(i) for i in f.readline().strip().split(','))
 
     # part 1

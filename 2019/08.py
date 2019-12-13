@@ -6,7 +6,7 @@ def layer(image, n):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/08.txt') as f:
         image = tuple(int(i) for i in f.readline().strip())
 
     num_layers = int(len(image) / STRIDE)
@@ -27,4 +27,4 @@ if __name__ == "__main__":
                 break
 
     for i in range(SIZE[1]):
-        print(output[SIZE[0] * i:SIZE[0] * (i + 1)])
+        print('.' if output[SIZE[0] * i:SIZE[0] * (i + 1)] else ' ')

@@ -6,7 +6,7 @@ def parents(child, tree):
 
 
 if __name__ == "__main__":
-    with open('input.txt') as f:
+    with open('input/06.txt') as f:
         objs = tuple(line.strip().split(')') for line in f)
 
     children = { orb: cen for cen, orb in objs }

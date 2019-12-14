@@ -1,28 +1,41 @@
+POINTER = -1
+RELATIVE_BASE = -2
+
+
 class Intcode:
 
     opcodes = (None, 3, 3, 1, 1, 2, 2, 3, 3, 1)
-
-    operator = {
-        1: lambda a, b: a + b,
-        2: lambda a, b: a * b,
-        7: lambda a, b: int(a < b),
-        8: lambda a, b: int(a == b),
-    }
 
     def __init__(self, instructions):
         if isinstance(instructions, str):
             instructions = instructions.strip().split(',')
 
         self.mem = { i: int(v) for i, v in enumerate(instructions) }
+        self.mem[RELATIVE_BASE] = 0
 
         self.pointer = 0
-        self.rel_base = 0
-
         self.outputs = []
         self.machine = self.loop()
-        self.send(None)
+        self.send()
 
-    def send(self, value):
+    @property
+    def pointer(self):
+        return self.mem[POINTER]
+
+    @pointer.setter
+    def pointer(self, value):
+        self.mem[POINTER] = value
+
+    @property
+    def relative_base(self):
+        return self.mem[RELATIVE_BASE]
+
+    def send(self, value=None):
+        try:
+            value = int(value)
+        except TypeError:
+            pass
+
         try:
             self.machine.send(value)
         except StopIteration:
@@ -47,23 +60,68 @@ class Intcode:
         return self.mem.get(*key)
 
     def __setitem__(self, key, value):
-        self.mem[key[0]] = value
+        if value is not None:
+            self.mem[key] = value
 
     def parse(self):
         op = self.mem[self.pointer]
-        modes = tuple(reversed('%03d' % (op // 100)))
+        modes = tuple(int(i) for i in reversed('%03d' % (op // 100)))
         op %= 100
         yield op
-        if op == 99:
+        try:
+            args = self.opcodes[op]
+        except IndexError:
             return
 
-        for i in range(self.opcodes[op]):
+        for i in range(args):
             mode = modes[i]
             p = self.mem[self.pointer + 1 + i]
-            if mode == '1':
+            if mode == 1:
                 yield None, p
             else:
-                yield p + (0 if mode == '0' else self.rel_base), 0
+                yield p + (self.relative_base if mode else 0), 0
+
+        self.pointer += (args + 1)
+
+    def to(self, op, args):
+        if op == 3:
+            return args[0][0]
+
+        if op == 9:
+            return RELATIVE_BASE
+
+        try:
+            return args[2][0]
+        except IndexError:
+            return POINTER
+
+    def compute(self, op, a, b=None, c=None):
+        if op == 1:
+            return a + b
+
+        if op == 2:
+            return a * b
+
+        if op == 3:
+            return a
+
+        if op == 4:
+            return self.outputs.append(a)
+
+        if op == 5 and a != 0:
+            return b
+
+        if op == 6 and a == 0:
+            return b
+
+        if op == 7:
+            return int(a < b)
+
+        if op == 8:
+            return int(a == b)
+
+        if op == 9:
+            return self.relative_base + a
 
     def loop(self):
         while True:
@@ -71,24 +129,8 @@ class Intcode:
             if op == 99:
                 break
 
+            values = [self[k] for k in keys]
             if op == 3:
-                a = yield
-                self[keys[0]] = int(a)
-            elif op == 4:
-                self.outputs.append(self[keys[0]])
-            elif op == 9:
-                self.rel_base += self[keys[0]]
-            else:
-                a = self[keys[0]]
-                b = self[keys[1]]
+                values[0] = yield
 
-                if (op == 5 and a != 0) or (op == 6 and a == 0):
-                    self.pointer = b
-                    continue
-
-                try:
-                    self[keys[2]] = self.operator[op](a, b)
-                except KeyError:
-                    pass
-
-            self.pointer += (self.opcodes[op] + 1)
+            self[self.to(op, keys)] = self.compute(op, *values)

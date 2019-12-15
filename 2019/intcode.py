@@ -1,10 +1,9 @@
 POINTER = -1
 RELATIVE_BASE = -2
+ARGS = (None, 3, 3, 1, 1, 2, 2, 3, 3, 1)
 
 
 class Intcode:
-
-    opcodes = (None, 3, 3, 1, 1, 2, 2, 3, 3, 1)
 
     def __init__(self, instructions):
         if isinstance(instructions, str):
@@ -12,8 +11,8 @@ class Intcode:
 
         self.mem = { i: int(v) for i, v in enumerate(instructions) }
         self.mem[RELATIVE_BASE] = 0
+        self.mem[POINTER] = 0
 
-        self.pointer = 0
         self.outputs = []
         self.machine = self.loop()
         self.send()
@@ -21,10 +20,6 @@ class Intcode:
     @property
     def pointer(self):
         return self.mem[POINTER]
-
-    @pointer.setter
-    def pointer(self, value):
-        self.mem[POINTER] = value
 
     @property
     def relative_base(self):
@@ -63,25 +58,18 @@ class Intcode:
         if value is not None:
             self.mem[key] = value
 
-    def parse(self):
-        op = self.mem[self.pointer]
-        modes = tuple(int(i) for i in reversed('%03d' % (op // 100)))
-        op %= 100
-        yield op
-        try:
-            args = self.opcodes[op]
-        except IndexError:
-            return
+    def step(self):
+        value = self.mem[self.pointer]
+        self.mem[POINTER] = self.pointer + 1
+        return value
 
-        for i in range(args):
-            mode = modes[i]
-            p = self.mem[self.pointer + 1 + i]
+    def keys(self, modes):
+        for mode in map(int, reversed(modes)):
+            p = self.step()
             if mode == 1:
                 yield None, p
             else:
                 yield p + (self.relative_base if mode else 0), 0
-
-        self.pointer += (args + 1)
 
     def to(self, op, args):
         if op == 3:
@@ -125,10 +113,11 @@ class Intcode:
 
     def loop(self):
         while True:
-            op, *keys = self.parse()
+            modes, op = divmod(self.step(), 100)
             if op == 99:
                 break
 
+            keys = tuple(self.keys('{:0{n}}'.format(modes, n=ARGS[op])))
             values = [self[k] for k in keys]
             if op == 3:
                 values[0] = yield

@@ -59,8 +59,8 @@ class Body(dict):
 
 class Sim:
 
-    def __init__(self, bodies):
-        self.bodies = tuple(bodies)
+    def __init__(self, lines):
+        self.bodies = tuple(Body(line.strip()) for line in lines)
         self.accel = ((-1, 1), (1, -1))
         self.periods = {k: None for k in 'xyz'}
 
@@ -98,20 +98,20 @@ class Sim:
 
 if __name__ == "__main__":
     with open('input/12.txt') as f:
-        moons = Sim(Body(line.strip()) for line in f)
+        moons = Sim(f)
 
+    # part 1
     for i in range(1000):
         moons.step()
         moons.check(i + 1)
 
-    # part 1
     print(sum(moons.energies()))
 
+    # part 2
     while True:
         i += 1
         if moons.check(i):
             break
         moons.step()
 
-    # part 2
     print(reduce(lcm, moons.periods.values()))

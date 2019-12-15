@@ -33,14 +33,18 @@ def get_angle(station, target):
 
 
 def sweep(station, angles):
-    def a(x, y):
+
+    def bearing(k):
+        x, y = k[0]
         return (atan2(y, x) - pi / 2 - pi) % (2 * pi)
 
-    sx, sy = station
-    for vs in angles.values():
-        vs.sort(key=lambda p: hypot(sx - p[0], sy - p[1]), reverse=True)
+    def distance(p):
+        return hypot(station[0] - p[0], station[1] - p[1])
 
-    rotation = sorted(angles.items(), key=lambda k: a(*k[0]))
+    for vs in angles.values():
+        vs.sort(key=distance, reverse=True)
+
+    rotation = sorted(angles.items(), key=bearing)
 
     for i in range(max(len(v) for v in angles.values())):
         for k, v in rotation:

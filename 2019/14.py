@@ -7,6 +7,7 @@ class Reaction:
     def __init__(self, line):
         inputs, output = line.strip().split(' => ')
         self.inputs = dict(self.parse(i) for i in inputs.split(','))
+        self.names = tuple(sorted(self.inputs, key=self.key))
         self.output, self.count = self.parse(output)
 
     @staticmethod
@@ -14,17 +15,14 @@ class Reaction:
         count, name = item.strip().split(' ')
         return name, int(count)
 
-    def requirements(self, count=1):
-        for name, n in self.inputs.items():
-            yield name, n * count
+    def key(self, name):
+        return 0 if name == 'ORE' else -self.inputs[name]
 
-    def insufficient(self, pool, count=1):
-        for n, c in self.requirements(count):
-            if n == 'ORE':
-                continue
-            if c > pool[n]:
-                return True
-        return False
+    def __getitem__(self, count):
+        times = ceil(count / self.count)
+        for name in self.names:
+            yield name, self.inputs[name] * times
+        yield self.output, -self.count * times
 
     def __repr__(self):
         return '<Reaction (%d %s)>' % (self.count, self.output)
@@ -53,21 +51,26 @@ class Factory:
 
     def ns(self, k):
         n, c = k
-        return n, max(c - self.pool[n], 0)
+        return n, c - self.pool[n]
+
+    def insufficient(self, chemicals):
+        for n, c in chemicals:
+            if n == 'ORE' or c <= 0:
+                continue
+            if self.pool[n] < c:
+                return True
+        return False
 
     def generate(self, name, count):
         if name == 'ORE' or count <= 0:
             return
 
-        r = self.reactions.get(name)
-        times = ceil(count / r.count)
-        reqs = tuple(r.requirements(times))
+        reqs = tuple(self.reactions.get(name)[count])
 
-        while r.insufficient(self.pool, times):
+        while self.insufficient(reqs):
             for n, need in sorted(map(self.ns, reqs), key=self.ks):
                 self.generate(n, need)
 
-        self.pool[r.output] += (r.count * times)
         for n, c in reqs:
             self.pool[n] -= c
 

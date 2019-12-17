@@ -1,19 +1,14 @@
 POINTER = -1
-RELATIVE_BASE = -2
-ARGS = (None, 3, 3, 1, 1, 2, 2, 3, 3, 1)
+OUTPUTS = -2
+RELATIVE_BASE = -3
 
 
 class Intcode:
 
-    def __init__(self, instructions):
-        if isinstance(instructions, str):
-            instructions = instructions.strip().split(',')
+    nargs = (None, 3, 3, 1, 1, 2, 2, 3, 3, 1)
 
-        self.mem = { i: int(v) for i, v in enumerate(instructions) }
-        self.mem[RELATIVE_BASE] = 0
-        self.mem[POINTER] = 0
-
-        self.outputs = []
+    def __init__(self, ints='99', **kw):
+        self.mem = dict(kw.get('state', self.from_ints(ints)))
         self.machine = self.loop()
         self.send()
 
@@ -22,25 +17,37 @@ class Intcode:
         return self.mem[POINTER]
 
     @property
+    def outputs(self):
+        return self.mem[OUTPUTS]
+
+    @property
     def relative_base(self):
         return self.mem[RELATIVE_BASE]
 
     def send(self, value=None):
         try:
-            value = int(value)
-        except TypeError:
-            pass
-
-        try:
             self.machine.send(value)
         except StopIteration:
             pass
 
-    def read(self):
+    def sendline(self, line):
+        for char in line:
+            self.send(ord(char))
+        self.send(10)
+
+    def read(self, line=None):
+        if line is not None:
+            return ''.join(self.readline(line)).strip()
         try:
             return self.outputs.pop(0)
         except IndexError:
             pass
+
+    def readline(self, line):
+        for char in self:
+            yield str(char) if char > 255 else chr(char)
+            if line and char == 10:
+                break
 
     def __iter__(self):
         return self
@@ -55,8 +62,9 @@ class Intcode:
         return self.mem.get(*key)
 
     def __setitem__(self, key, value):
-        if value is not None:
-            self.mem[key] = value
+        if value is None:
+            return
+        self.mem[key] = value
 
     def step(self):
         value = self.mem[self.pointer]
@@ -91,7 +99,7 @@ class Intcode:
             return a * b
 
         if op == 3:
-            return a
+            return int(a)
 
         if op == 4:
             return self.outputs.append(a)
@@ -112,14 +120,40 @@ class Intcode:
             return self.relative_base + a
 
     def loop(self):
+        nargs = self.nargs
         while True:
+            self.current = self.pointer
             modes, op = divmod(self.step(), 100)
             if op == 99:
                 break
 
-            keys = tuple(self.keys('{:0{n}}'.format(modes, n=ARGS[op])))
+            keys = tuple(self.keys(f'{modes:0{nargs[op]}}'))
             values = [self[k] for k in keys]
             if op == 3:
                 values[0] = yield
 
             self[self.to(op, keys)] = self.compute(op, *values)
+        self.current = None
+
+    def clone_state(self):
+        for k, v in self.mem.items():
+            if k == OUTPUTS:
+                v = v[:]
+            elif k == POINTER:
+                v = self.current or 0
+            yield k, v
+
+    def clone(self, **kw):
+        return Intcode(state=self.clone_state(), **kw)
+
+    @staticmethod
+    def from_ints(ints):
+        if isinstance(ints, str):
+            ints = ints.strip().split(',')
+
+        yield POINTER, 0
+        yield OUTPUTS, []
+        yield RELATIVE_BASE, 0
+
+        for i, v in enumerate(ints):
+            yield i, int(v)

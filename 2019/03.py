@@ -23,20 +23,14 @@ def trace(line):
     return route
 
 
-def min_dist(a, b):
-    return min(abs(x) + abs(y) for x, y in (a.keys() & b.keys()))
-
-
-def min_step(a, b):
-    return min(a[k] + b[k] for k in (a.keys() & b.keys()))
-
-
 if __name__ == "__main__":
     with open('input/03.txt') as f:
         wires = tuple(line.strip() for line in f)
 
     # part 1
-    print(min_dist(*(trace(w) for w in wires)))
+    a, b = map(trace, wires)
+    intersections = a.keys() & b.keys()
+    print(min(abs(x) + abs(y) for x, y in intersections))
 
     # part 2
-    print(min_step(*(trace(w) for w in wires)))
+    print(min(a[k] + b[k] for k in intersections))

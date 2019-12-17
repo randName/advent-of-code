@@ -18,7 +18,6 @@ if __name__ == "__main__":
 
     # part 2
     output = [None for _ in range(STRIDE)]
-
     for i in range(STRIDE):
         for j in range(num_layers):
             p = image[j * STRIDE + i]
@@ -27,4 +26,6 @@ if __name__ == "__main__":
                 break
 
     for i in range(SIZE[1]):
-        print('.' if output[SIZE[0] * i:SIZE[0] * (i + 1)] else ' ')
+        for j in output[SIZE[0] * i:SIZE[0] * (i + 1)]:
+            print('#' if j else ' ', end='')
+        print()

@@ -9,7 +9,7 @@ class Intcode:
 
     def __init__(self, ints='99', **kw):
         self.mem = dict(kw.get('state', self.from_ints(ints)))
-        self.machine = self.loop()
+        self.machine = self.cycle()
         self.send()
 
     @property
@@ -66,32 +66,22 @@ class Intcode:
             return
         self.mem[key] = value
 
-    def step(self):
+    def address(self, mode):
+        value = self.fetch()
+        if mode == 1:
+            return None, value
+        return value + (self.relative_base if mode else 0), 0
+
+    def fetch(self):
         value = self.mem[self.pointer]
         self.mem[POINTER] = self.pointer + 1
         return value
 
-    def keys(self, modes):
-        for mode in map(int, reversed(modes)):
-            p = self.step()
-            if mode == 1:
-                yield None, p
-            else:
-                yield p + (self.relative_base if mode else 0), 0
+    def decode(self):
+        modes, op = divmod(self.fetch(), 100)
+        return op, tuple(map(int, reversed(f'{modes:0{self.nargs[op]}}')))
 
-    def to(self, op, args):
-        if op == 3:
-            return args[0][0]
-
-        if op == 9:
-            return RELATIVE_BASE
-
-        try:
-            return args[2][0]
-        except IndexError:
-            return POINTER
-
-    def compute(self, op, a, b=None, c=None):
+    def execute(self, op, a, b=None, c=None):
         if op == 1:
             return a + b
 
@@ -119,20 +109,27 @@ class Intcode:
         if op == 9:
             return self.relative_base + a
 
-    def loop(self):
-        nargs = self.nargs
+    def cycle(self):
         while True:
             self.current = self.pointer
-            modes, op = divmod(self.step(), 100)
-            if op == 99:
+            try:
+                op, modes = self.decode()
+            except IndexError:
                 break
 
-            keys = tuple(self.keys(f'{modes:0{nargs[op]}}'))
-            values = [self[k] for k in keys]
+            addresses = tuple(map(self.address, modes))
+            values = [self[a] for a in addresses]
             if op == 3:
                 values[0] = yield
 
-            self[self.to(op, keys)] = self.compute(op, *values)
+            if op == 9:
+                destination = RELATIVE_BASE
+            elif op == 5 or op == 6:
+                destination = POINTER
+            else:
+                destination = addresses[-1][0]
+
+            self[destination] = self.execute(op, *values)
         self.current = None
 
     def clone_state(self):

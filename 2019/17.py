@@ -47,6 +47,54 @@ def trace(scaffold, x, y, heading):
     return tuple(str(i) for i in route)
 
 
+def compress_route(route, max_len=20):
+    routelen = len(route)
+    routeset = set(range(routelen))
+    routerange = range(1, routelen)
+
+    def get_positions(segment):
+        seg = len(segment)
+        for i in range(routelen - seg + 1):
+            if route[i:i + seg] == segment:
+                yield i, tuple(range(i, i + seg))
+
+    def get_frags(frags):
+        for frag in frags:
+            if not frag:
+                continue
+            if len(','.join(frag)) > max_len:
+                break
+            positions, prs = zip(*get_positions(frag))
+            yield frag, positions, {p for pr in prs for p in pr}
+
+    ends = tuple(get_frags(route[-i:] for i in routerange))
+
+    for start, sp, ss in get_frags(route[:i] for i in routerange):
+        for end, ep, es in ends:
+            if ss & es:
+                continue
+            taken = ss | es
+
+            sl = len(start)
+            remain = (routeset - taken).union(range(sl))
+            el = min(routeset - remain) + 1
+
+            mids = (route[sl:i] for i in range(sl, el))
+            for mid, mp, ms in get_frags(mids):
+                if (ms & taken) or (routeset - (taken | ms)):
+                    continue
+                yield ((start, sp), (mid, mp), (end, ep))
+
+
+def get_commands(segments):
+    info = {name: seg for name, seg in zip('ABC', segments)}
+    for name, seg in info.items():
+        yield f'Function {name}', seg[0]
+
+    sequence = sorted((p, n) for n, s in info.items() for p in s[1])
+    yield 'Main', ''.join(name for pos, name in sequence)
+
+
 if __name__ == '__main__':
     from intcode import Intcode
 
@@ -65,6 +113,8 @@ if __name__ == '__main__':
     route = trace(scaffold, *robot)
     print('route:', ','.join(route))
 
+    compressed = next(compress_route(route))
+
     instructions[0] = 2
     vm = Intcode(instructions)
 
@@ -75,10 +125,7 @@ if __name__ == '__main__':
             break
 
     commands = {
-        'Main': 'ABABCBCACC',
-        'Function A': ('R', '12', 'L', '10', 'L', '10'),
-        'Function B': ('L',  '6', 'L', '12', 'R', '12', 'L', '4'),
-        'Function C': ('L', '12', 'R', '12', 'L',  '6'),
+        **dict(get_commands(compressed)),
         'Continuous video feed': 'n',
     }
 

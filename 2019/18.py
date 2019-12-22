@@ -50,8 +50,9 @@ class Maze:
         for key in (distances.keys() & self.keys):
             if key == position:
                 continue
-            doors = {self.items[d] for d in self.doors.intersection(paths[key])}
-            yield self.items[key], (distances[key], doors)
+            doors = self.doors.intersection(paths[key])
+            info = (distances[key], {self.items[d] for d in doors})
+            yield self.items[key], info
 
 
 def update_for_part_2(maze):
@@ -109,13 +110,12 @@ if __name__ == '__main__':
             yield (current_dist + info[0], key, key)
 
     dists_1 = dijkstra(('', 0), simple, stop=found)
-    min_d = min(d for s, d in dists_1.items() if len(s[0]) == maze.numkeys)
+    min_d = min(d for s, d in dists_1.items() if found(s, d))
     print(min_d)
 
     # part 2
     update_for_part_2(maze)
     maze.compute_graph()
-    best_dist = {}
 
     @maze_neighbour
     def robots(node, current_dist):
@@ -129,7 +129,6 @@ if __name__ == '__main__':
                 bots[i] = key
                 yield (current_dist + info[0], key, *bots)
 
-
     dists_2 = dijkstra(('', *maze.start), robots, stop=found)
-    min_d = min(d for s, d in dists_2.items() if len(s[0]) == maze.numkeys)
+    min_d = min(d for s, d in dists_2.items() if found(s, d))
     print(min_d)

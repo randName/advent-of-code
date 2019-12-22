@@ -10,6 +10,12 @@ def pattern(i):
         yield from seq
 
 
+def pattern_at(index, position):
+    if index * 2 > position:
+        return 1
+    return (0, 1, 0, -1)[((index + 1) // position + 1)) % 4]
+
+
 def phase(signal):
     for i in range(len(signal)):
         yield abs(sum((a * b) for a, b in zip(signal, pattern(i)))) % 10

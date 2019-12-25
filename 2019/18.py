@@ -68,28 +68,6 @@ def update_for_part_2(maze):
                 i += 1
 
 
-def maze_neighbour(func, max_nodes=5, cull_factor=1.6):
-    best_dist = {}
-
-    def f(node, current_dist):
-        numkeys = len(node[0])
-        best = best_dist.get(numkeys)
-        if best is None or current_dist < best:
-            best_dist[numkeys] = current_dist
-
-        newbest = best_dist.get(numkeys + 1)
-        cull = (newbest * cull_factor) if newbest else 0
-
-        keys = set(node[0])
-        nodes = sorted(func(node, current_dist))
-        for dist, key, *state in nodes[:max_nodes]:
-            if cull and dist > cull:
-                continue
-            yield (''.join(sorted({key} | keys)), *state), dist
-
-    return f
-
-
 if __name__ == '__main__':
     with open('input/18.txt') as f:
         maze = Maze(line.strip() for line in f)
@@ -101,13 +79,13 @@ if __name__ == '__main__':
     maze.compute_graph()
     free_keys = sum(1 for d, k in maze.graph[0].values() if not k)
 
-    @maze_neighbour
     def simple(node, current_dist):
         keys = set(node[0])
         for key, info in maze.graph[node[1]].items():
             if key in keys or (info[1] - keys):
                 continue
-            yield (current_dist + info[0], key, key)
+            newkeys = ''.join(sorted({key} | keys))
+            yield (newkeys, key), current_dist + info[0]
 
     dists_1 = dijkstra(('', 0), simple, stop=found)
     min_d = min(d for s, d in dists_1.items() if found(s, d))
@@ -117,7 +95,6 @@ if __name__ == '__main__':
     update_for_part_2(maze)
     maze.compute_graph()
 
-    @maze_neighbour
     def robots(node, current_dist):
         keys = set(node[0])
         botpos = node[1:]
@@ -127,7 +104,8 @@ if __name__ == '__main__':
                     continue
                 bots = list(botpos)
                 bots[i] = key
-                yield (current_dist + info[0], key, *bots)
+                newkeys = ''.join(sorted({key} | keys))
+                yield (newkeys, *bots), current_dist + info[0]
 
     dists_2 = dijkstra(('', *maze.start), robots, stop=found)
     min_d = min(d for s, d in dists_2.items() if found(s, d))

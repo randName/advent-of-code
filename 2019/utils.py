@@ -1,3 +1,6 @@
+from heapq import heappop, heappush
+
+
 class Paths:
 
     def __init__(self, tree):
@@ -19,31 +22,32 @@ class Paths:
 def dijkstra(src, neighbours, dst=None, stop=None, paths=False):
     parents = {}
     visited = set()
-    unvisited = {src}
     distances = {src: 0}
 
-    def dist(key):
-        return distances[key]
+    queue = [(0, src)]
 
-    while unvisited:
-        current = min(unvisited, key=dist)
-        for node, newdist in neighbours(current, distances[current]):
+    while queue:
+        cur_dist, current = heappop(queue)
+
+        if current == dst:
+            break
+
+        if current in visited:
+            continue
+        visited.add(current)
+
+        for node, newdist in neighbours(current, cur_dist):
             olddist = distances.get(node)
             if olddist is None or newdist < olddist:
                 parents[node] = current
                 distances[node] = newdist
-
-        if current == dst:
-            break
+                heappush(queue, (newdist, node))
 
         try:
             if stop(current, distances):
                 break
         except TypeError:
             pass
-
-        visited.add(current)
-        unvisited = distances.keys() - visited
 
     if dst is not None:
         return distances[dst]
